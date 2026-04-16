@@ -40,7 +40,6 @@ const PAYMENT_METHOD_MIGRATION = {
 const state = {
   transactions: [],
   selectedMonth: getCurrentMonth(),
-  receiptImageDataUrl: "",
 };
 
 const elements = {
@@ -56,15 +55,8 @@ const elements = {
   transactionList: document.querySelector("#transactionList"),
   transactionForm: document.querySelector("#transactionForm"),
   categoryField: document.querySelector("#categoryField"),
-  scanCategoryField: document.querySelector("#scanCategoryField"),
   monthSelector: document.querySelector("#monthSelector"),
   adviceList: document.querySelector("#adviceList"),
-  receiptFile: document.querySelector("#receiptFile"),
-  scanReceiptButton: document.querySelector("#scanReceiptButton"),
-  receiptPreview: document.querySelector("#receiptPreview"),
-  receiptPlaceholder: document.querySelector("#receiptPlaceholder"),
-  scanStatus: document.querySelector("#scanStatus"),
-  scanResultForm: document.querySelector("#scanResultForm"),
   refreshAdviceButton: document.querySelector("#refreshAdviceButton"),
   template: document.querySelector("#transactionItemTemplate"),
 };
@@ -74,7 +66,6 @@ boot();
 function boot() {
   hydrateState();
   populateCategories("expense");
-  populateScanCategories();
   bindEvents();
   renderAll();
   registerServiceWorker();
@@ -97,7 +88,6 @@ function hydrateState() {
 
   elements.monthSelector.value = state.selectedMonth;
   elements.transactionForm.date.value = getToday();
-  elements.scanResultForm.date.value = getToday();
 }
 
 function bindEvents() {
@@ -115,9 +105,6 @@ function bindEvents() {
     renderAll();
   });
 
-  elements.receiptFile.addEventListener("change", onReceiptSelected);
-  elements.scanReceiptButton.addEventListener("click", onScanReceipt);
-  elements.scanResultForm.addEventListener("submit", onSaveScanResult);
   elements.refreshAdviceButton.addEventListener("click", renderAdvice);
 }
 
@@ -137,14 +124,6 @@ function populateCategories(type) {
     .join("");
 }
 
-function populateScanCategories() {
-  const categories = DEFAULT_CATEGORIES.expense;
-  const html = categories
-    .map((category) => `<option value="${category}">${category}</option>`)
-    .join("");
-  elements.scanCategoryField.innerHTML = html;
-}
-
 function onSubmitTransaction(event) {
   event.preventDefault();
   const formData = new FormData(elements.transactionForm);
@@ -162,97 +141,14 @@ function onSubmitTransaction(event) {
   };
 
   state.transactions.unshift(transaction);
+  state.selectedMonth = transaction.date.slice(0, 7);
   persistTransactions();
   elements.transactionForm.reset();
   elements.transactionForm.querySelector('input[name="type"][value="expense"]').checked = true;
   elements.transactionForm.date.value = getToday();
+  elements.monthSelector.value = state.selectedMonth;
   populateCategories("expense");
   renderAll();
-  switchTab("dashboard");
-}
-
-async function onReceiptSelected(event) {
-  const file = event.target.files?.[0];
-  if (!file) {
-    return;
-  }
-
-  state.receiptImageDataUrl = await fileToDataUrl(file);
-  elements.receiptPreview.src = state.receiptImageDataUrl;
-  elements.receiptPreview.hidden = false;
-  elements.receiptPlaceholder.hidden = true;
-  setScanStatus("Receipt uploaded. You can start scanning now.", "muted");
-}
-
-async function onScanReceipt() {
-  if (!state.receiptImageDataUrl) {
-    setScanStatus("Please upload a receipt photo first.", "error");
-    return;
-  }
-
-  if (!window.Tesseract) {
-    setScanStatus("OCR failed to load. Please refresh and try again.", "error");
-    return;
-  }
-
-  setScanStatus("Scanning locally. The first run may take a little longer.", "muted");
-
-  try {
-    const parsed = await extractReceiptWithOCR(state.receiptImageDataUrl);
-    fillScanResult(parsed);
-    setScanStatus("Scan complete. Please review the details before saving.", "success");
-    switchTab("receipt");
-  } catch (error) {
-    console.error(error);
-    setScanStatus(
-      "Scan failed. The image may be blurry, the network may be unavailable, or OCR may not have read the text correctly. You can still edit it manually and save.",
-      "error",
-    );
-  }
-}
-
-function fillScanResult(parsed) {
-  elements.scanResultForm.merchant.value = parsed.merchant || "";
-  elements.scanResultForm.amount.value = parsed.amount || "";
-  elements.scanResultForm.date.value = normalizeDate(parsed.date) || getToday();
-  elements.scanResultForm.category.value = DEFAULT_CATEGORIES.expense.includes(parsed.category)
-    ? parsed.category
-    : "Other";
-  elements.scanResultForm.note.value = [
-    parsed.note?.trim(),
-    parsed.items?.length ? `Detected items: ${parsed.items.join(", ")}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function onSaveScanResult(event) {
-  event.preventDefault();
-  const formData = new FormData(elements.scanResultForm);
-
-  const transaction = {
-    id: crypto.randomUUID(),
-    type: "expense",
-    amount: Number(formData.get("amount")),
-    date: formData.get("date"),
-    category: formData.get("category"),
-    paymentMethod: "Other",
-    note: formData.get("note").trim(),
-    merchant: formData.get("merchant").trim(),
-    createdAt: new Date().toISOString(),
-  };
-
-  if (!transaction.amount || !transaction.date) {
-    setScanStatus("Please confirm at least the amount and date before saving.", "error");
-    return;
-  }
-
-  state.transactions.unshift(transaction);
-  persistTransactions();
-  elements.scanResultForm.reset();
-  elements.scanResultForm.date.value = getToday();
-  renderAll();
-  setScanStatus("Saved to your ledger.", "success");
   switchTab("dashboard");
 }
 
@@ -501,110 +397,6 @@ function generateAdvice(transactions) {
   return advice;
 }
 
-async function extractReceiptWithOCR(imageDataUrl) {
-  const {
-    data: { text },
-  } = await window.Tesseract.recognize(imageDataUrl, "chi_sim+eng", {
-    logger: (message) => {
-      if (message.status === "recognizing text" && typeof message.progress === "number") {
-        setScanStatus(`Scanning text ${(message.progress * 100).toFixed(0)}%`, "muted");
-      }
-    },
-  });
-
-  return parseReceiptText(text);
-}
-
-function parseReceiptText(rawText) {
-  const text = rawText.replace(/\r/g, "").trim();
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const amount = extractAmount(lines);
-  const date = extractDate(text);
-  const merchant = extractMerchant(lines);
-  const category = guessCategory(`${merchant}\n${text}`);
-  const items = extractItems(lines);
-
-  return {
-    merchant,
-    amount,
-    date,
-    category,
-    note: text,
-    items,
-  };
-}
-
-function extractAmount(lines) {
-  const joined = lines.join("\n");
-  const labeledMatches = [...joined.matchAll(/(?:合计|总计|应付|实付|消费金额|金额|TOTAL)[^\d]{0,8}(\d+[.,]?\d{0,2})/gi)];
-  if (labeledMatches.length) {
-    return Number(labeledMatches[labeledMatches.length - 1][1].replace(",", "."));
-  }
-
-  const candidates = [...joined.matchAll(/(?:^|[^\d])(\d{1,5}[.,]\d{2})(?:[^\d]|$)/g)].map((match) =>
-    Number(match[1].replace(",", ".")),
-  );
-
-  if (!candidates.length) {
-    return 0;
-  }
-
-  return Math.max(...candidates);
-}
-
-function extractDate(text) {
-  const match =
-    text.match(/(20\d{2})[\/.\-](\d{1,2})[\/.\-](\d{1,2})/) ||
-    text.match(/(20\d{2})年(\d{1,2})月(\d{1,2})日/);
-
-  if (!match) {
-    return getToday();
-  }
-
-  const [, year, month, day] = match;
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function extractMerchant(lines) {
-  const firstUsefulLine = lines.find(
-    (line) => /[\u4e00-\u9fa5A-Za-z]/.test(line) && !/cashier|welcome|thank|total|subtotal|tax|收银|欢迎|谢谢|合计|总计/i.test(line),
-  );
-  return firstUsefulLine || "Unknown merchant";
-}
-
-function extractItems(lines) {
-  return lines
-    .filter((line) => /[\u4e00-\u9fa5A-Za-z]/.test(line))
-    .filter((line) => !/(total|subtotal|tax|tip|balance|change|cashier|welcome|thank|合计|总计|应付|实付|找零|收银)/i.test(line))
-    .slice(0, 5);
-}
-
-function guessCategory(text) {
-  const rules = [
-    { category: "Dining", patterns: ["restaurant", "cafe", "coffee", "pizza", "deli", "bagel", "bar", "food", "ubereats", "doordash", "grubhub"] },
-    { category: "Transit", patterns: ["mta", "subway", "train", "bus", "uber", "lyft", "taxi", "parking", "toll", "metro"] },
-    { category: "Groceries", patterns: ["grocery", "market", "trader joe", "whole foods", "costco", "target", "supermarket"] },
-    { category: "Rent & Utilities", patterns: ["rent", "coned", "con ed", "electric", "gas", "internet", "water", "utility"] },
-    { category: "Shopping", patterns: ["store", "retail", "uniqlo", "zara", "amazon", "mall", "purchase"] },
-    { category: "Entertainment", patterns: ["movie", "theater", "broadway", "netflix", "spotify", "ticket", "concert"] },
-    { category: "Healthcare", patterns: ["hospital", "pharmacy", "walgreens", "cvs", "doctor", "clinic", "medical"] },
-    { category: "Travel", patterns: ["hotel", "airline", "flight", "airbnb", "booking", "expedia"] },
-  ];
-
-  const lowered = text.toLowerCase();
-  const matched = rules.find((rule) => rule.patterns.some((pattern) => lowered.includes(pattern.toLowerCase())));
-  return matched ? matched.category : "Other";
-}
-
-function setScanStatus(message, tone) {
-  elements.scanStatus.textContent = message;
-  elements.scanStatus.className = `callout ${tone}`;
-}
-
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -613,37 +405,18 @@ function formatCurrency(value) {
 }
 
 function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
 }
 
 function getToday() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function normalizeDate(value) {
-  if (!value) {
-    return "";
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return parsed.toISOString().slice(0, 10);
-}
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function registerServiceWorker() {
