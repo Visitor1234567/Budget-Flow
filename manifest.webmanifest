@@ -1,0 +1,16 @@
+{
+  "name": "Budget Flow",
+  "short_name": "Budget Flow",
+  "description": "一个适配 iPhone 的轻量记账 App，支持月度统计、小票识别和消费建议。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7efe5",
+  "theme_color": "#f7efe5",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

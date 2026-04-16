@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f7efe5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Budget Flow" />
+    <title>Budget Flow</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/6.0.1/tesseract.min.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Budget Flow</p>
+          <h1>给自己用的轻量记账 App</h1>
+          <p class="hero-copy">
+            记录收入支出、查看月度分类统计、上传 receipt 自动识别，并根据你的账本给出更适合纽约生活的开源节流建议。
+          </p>
+        </div>
+        <div class="hero-card">
+          <p>Monthly Balance</p>
+          <strong id="heroBalance">$0.00</strong>
+          <span id="heroSummary">Add your first entry to get started.</span>
+        </div>
+      </header>
+
+      <nav class="tab-bar" aria-label="主导航">
+        <button class="tab-button active" data-tab="dashboard">总览</button>
+        <button class="tab-button" data-tab="add">记一笔</button>
+        <button class="tab-button" data-tab="receipt">Scan Receipt</button>
+        <button class="tab-button" data-tab="advice">NYC 建议</button>
+      </nav>
+
+      <main>
+        <section class="tab-panel active" id="dashboard">
+          <div class="panel-grid">
+            <article class="card metric-card">
+              <p>Income This Month</p>
+              <strong id="monthIncome">$0.00</strong>
+            </article>
+            <article class="card metric-card">
+              <p>Spending This Month</p>
+              <strong id="monthExpense">$0.00</strong>
+            </article>
+            <article class="card metric-card">
+              <p>Savings Rate</p>
+              <strong id="monthSavingRate">0%</strong>
+            </article>
+          </div>
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>月份概览</h2>
+                <p>切换月份查看你的 cash flow 变化</p>
+              </div>
+              <label class="month-picker">
+                <span>月份</span>
+                <input id="monthSelector" type="month" />
+              </label>
+            </div>
+            <div class="month-summary">
+              <div>
+                <span>Net Cash Flow</span>
+                <strong id="netIncome">$0.00</strong>
+              </div>
+              <div>
+                <span>Top Spending Category</span>
+                <strong id="topCategory">None yet</strong>
+              </div>
+              <div>
+                <span>Total Entries</span>
+                <strong id="entryCount">0 entries</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>支出分类统计</h2>
+                <p>看看钱主要花在哪些 NYC 日常类别</p>
+              </div>
+            </div>
+            <div id="categoryChart" class="chart-list empty-state">
+              No spending data yet
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Recent Entries</h2>
+                <p>按时间倒序展示</p>
+              </div>
+            </div>
+            <ul id="transactionList" class="transaction-list"></ul>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="add">
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>新增一笔</h2>
+                <p>支持收入和支出，数据默认保存在本机浏览器里</p>
+              </div>
+            </div>
+
+            <form id="transactionForm" class="stack-form">
+              <div class="segmented-control">
+                <label>
+                  <input type="radio" name="type" value="expense" checked />
+                  <span>支出</span>
+                </label>
+                <label>
+                  <input type="radio" name="type" value="income" />
+                  <span>收入</span>
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  <span>金额</span>
+                  <input
+                    type="number"
+                    name="amount"
+                    min="0"
+                    step="0.01"
+                    placeholder="for example 38.50"
+                    required
+                  />
+                </label>
+                <label>
+                  <span>日期</span>
+                  <input type="date" name="date" required />
+                </label>
+                <label>
+                  <span>分类</span>
+                  <select name="category" id="categoryField" required></select>
+                </label>
+                <label>
+                  <span>支付方式</span>
+                  <select name="paymentMethod">
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Apple Pay">Apple Pay</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Zelle">Zelle</option>
+                    <option value="Venmo">Venmo</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                  <span>备注 / Note</span>
+                <textarea
+                  name="note"
+                  rows="3"
+                  placeholder="for example: lunch in Midtown / paycheck posted"
+                ></textarea>
+              </label>
+
+              <button type="submit" class="primary-button">保存这笔记录</button>
+            </form>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="receipt">
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Receipt Scan</h2>
+                <p>上传 receipt，自动提取金额、日期、商家和建议分类</p>
+              </div>
+            </div>
+
+            <div class="receipt-layout">
+              <div class="stack-form">
+                <label>
+                  <span>Upload receipt photo</span>
+                  <input id="receiptFile" type="file" accept="image/*" />
+                </label>
+                <button id="scanReceiptButton" class="primary-button" type="button">
+                  Start Scan
+                </button>
+                <p class="helper-text">
+                  这是本地 OCR 版，不需要 OpenAI API Key。第一次识别时浏览器可能会下载
+                  OCR 模型文件，所以首次会稍慢一些。
+                </p>
+              </div>
+
+              <div class="receipt-preview card inset-card">
+                <img id="receiptPreview" alt="小票预览" hidden />
+                <div id="receiptPlaceholder" class="empty-state">
+                  上传一张 receipt 后，这里会显示预览
+                </div>
+              </div>
+            </div>
+
+            <div id="scanStatus" class="callout muted">
+              识别结果会自动填到下面表单里。receipt 内容复杂时，建议你手动检查一次。
+            </div>
+
+            <form id="scanResultForm" class="stack-form">
+              <div class="form-grid">
+                <label>
+                  <span>商家</span>
+                  <input type="text" name="merchant" />
+                </label>
+                <label>
+                  <span>Total Amount</span>
+                  <input type="number" name="amount" min="0" step="0.01" />
+                </label>
+                <label>
+                  <span>日期</span>
+                  <input type="date" name="date" />
+                </label>
+                <label>
+                  <span>Suggested Category</span>
+                  <select name="category" id="scanCategoryField"></select>
+                </label>
+              </div>
+
+              <label>
+                <span>Detected Items / Note</span>
+                <textarea name="note" rows="4"></textarea>
+              </label>
+
+              <button id="saveScanResultButton" class="primary-button" type="submit">
+                Save as Expense
+              </button>
+            </form>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="advice">
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>NYC 开源节流建议</h2>
+                <p>根据你当前账本自动生成，不会上传你的消费明细</p>
+              </div>
+              <button id="refreshAdviceButton" class="secondary-button" type="button">
+                Refresh Advice
+              </button>
+            </div>
+            <div id="adviceList" class="advice-list"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <template id="transactionItemTemplate">
+      <li class="transaction-item">
+        <div>
+          <strong class="item-title"></strong>
+          <p class="item-meta"></p>
+        </div>
+        <div class="item-side">
+          <strong class="item-amount"></strong>
+          <button class="text-button" type="button">删除</button>
+        </div>
+      </li>
+    </template>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
