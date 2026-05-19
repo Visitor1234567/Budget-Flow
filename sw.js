@@ -1,4 +1,4 @@
-const CACHE_NAME = "budget-flow-cache-v2";
+const CACHE_NAME = "nyc-ledger-cache-v5";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {

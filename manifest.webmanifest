@@ -1,11 +1,11 @@
 {
-  "name": "Budget Flow",
-  "short_name": "Budget Flow",
-  "description": "一个适配 iPhone 的轻量记账 App，支持月度统计、小票识别和消费建议。",
+  "name": "纽约账本",
+  "short_name": "纽约账本",
+  "description": "适合纽约华人在 iPhone 上随时打开的轻量记账工具，支持按月按年查看和图表分析。",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f7efe5",
-  "theme_color": "#f7efe5",
+  "background_color": "#f4f1ea",
+  "theme_color": "#f4f1ea",
   "icons": [
     {
       "src": "./icon.svg",

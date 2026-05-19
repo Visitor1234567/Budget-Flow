@@ -1,41 +1,282 @@
-Budget Flow
-给自己用的轻量记账 App
-记录收入支出、查看月度分类统计，并根据你的账本给出更适合纽约生活的开源节流建议。
-Monthly Balance
-$0.00 Add your first entry to get started.
-总览 记一笔 NYC 建议
-Income This Month
-$0.00
-Spending This Month
-$0.00
-Savings Rate
-0%
-月份概览
-切换月份查看你的 cash flow 变化
-月份
-Net Cash Flow $0.00
-Top Spending Category None yet
-Total Entries 0 entries
-支出分类统计
-看看钱主要花在哪些 NYC 日常类别
-No spending data yet
-Recent Entries
-按时间倒序展示
-	•	
-新增一笔
-支持收入和支出，数据默认保存在本机浏览器里
-支出 收入
-金额 日期 分类 支付方式
-                    Credit Card
-                    Debit Card
-                    Apple Pay
-                    Cash
-                    Zelle
-                    Venmo
-                    Other
-                  
-备注 / Note 保存这笔记录
-NYC 开源节流建议
-根据你当前账本自动生成，不会上传你的消费明细
-Refresh Advice
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f4f1ea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="纽约账本" />
+    <title>纽约账本</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">NYC Ledger</p>
+          <h1>纽约账本</h1>
+          <p class="hero-text">
+            继续沿用你已经录入的数据，重新整理成更适合手机随手记、按月按年查看的记账工具。
+          </p>
+        </div>
+        <article class="hero-balance">
+          <p id="periodBadge">月度视图</p>
+          <strong id="heroBalance">$0.00</strong>
+          <span id="heroSummary">当前周期的结余会显示在这里。</span>
+        </article>
+      </header>
 
+      <main>
+        <section class="tab-panel active" id="dashboard">
+          <section class="card overview-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">总览</p>
+                <h2 id="periodTitle">本月账本</h2>
+                <p id="periodSubtitle" class="helper-text">
+                  已保留你原有数据，新版会直接读取并展示。
+                </p>
+              </div>
+              <div class="segmented-control period-toggle" role="tablist" aria-label="视图切换">
+                <label>
+                  <input type="radio" name="viewMode" value="month" checked />
+                  <span>按月</span>
+                </label>
+                <label>
+                  <input type="radio" name="viewMode" value="year" />
+                  <span>按年</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="period-filters">
+              <label id="monthFilterWrap" class="filter-field">
+                <span>选择月份</span>
+                <input id="monthSelector" type="month" />
+              </label>
+              <label id="yearFilterWrap" class="filter-field is-hidden">
+                <span>选择年份</span>
+                <select id="yearSelector"></select>
+              </label>
+            </div>
+
+            <div class="metric-grid">
+              <article class="metric-card">
+                <p>收入</p>
+                <strong id="periodIncome">$0.00</strong>
+              </article>
+              <article class="metric-card">
+                <p>支出</p>
+                <strong id="periodExpense">$0.00</strong>
+              </article>
+              <article class="metric-card">
+                <p>储蓄率</p>
+                <strong id="periodSavingRate">0%</strong>
+              </article>
+              <article class="metric-card">
+                <p>记录数</p>
+                <strong id="entryCount">0 笔</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="card glance-card">
+            <div class="glance-grid">
+              <article>
+                <span>最大支出分类</span>
+                <strong id="topCategory">还没有</strong>
+              </article>
+              <article>
+                <span>主力收入来源</span>
+                <strong id="topIncomeCategory">还没有</strong>
+              </article>
+              <article>
+                <span>平均每笔支出</span>
+                <strong id="averageExpense">$0.00</strong>
+              </article>
+              <article>
+                <span>最近一笔时间</span>
+                <strong id="lastTransactionTime">还没有</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head compact">
+              <div>
+                <p class="section-kicker">最近记录</p>
+                <h2>当前周期明细</h2>
+              </div>
+            </div>
+            <ul id="transactionList" class="transaction-list"></ul>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="add">
+          <section class="card form-card">
+            <div class="section-head compact">
+              <div>
+                <p class="section-kicker">记一笔</p>
+                <h2>尽量少填，尽量快记</h2>
+                <p class="helper-text">付款方式和建议金额已去掉，保留最常用的录入项。</p>
+              </div>
+              <button id="useNowButton" class="secondary-button" type="button">使用当前时间</button>
+            </div>
+
+            <form id="transactionForm" class="stack-form">
+              <div class="segmented-control">
+                <label>
+                  <input type="radio" name="type" value="expense" checked />
+                  <span>支出</span>
+                </label>
+                <label>
+                  <input type="radio" name="type" value="income" />
+                  <span>收入</span>
+                </label>
+              </div>
+
+              <label class="amount-field">
+                <span>金额</span>
+                <input
+                  id="amountField"
+                  type="number"
+                  name="amount"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  placeholder="例如 28.50"
+                  required
+                />
+              </label>
+
+              <div class="form-grid">
+                <label>
+                  <span>时间</span>
+                  <input id="datetimeField" type="datetime-local" name="datetime" required />
+                </label>
+                <label>
+                  <span>分类</span>
+                  <select name="category" id="categoryField" required></select>
+                </label>
+                <label>
+                  <span>商家 / 对象</span>
+                  <input
+                    type="text"
+                    name="merchant"
+                    maxlength="40"
+                    placeholder="例如 Trader Joe's / 公司 / 房东"
+                  />
+                </label>
+                <label>
+                  <span>备注</span>
+                  <input
+                    type="text"
+                    name="note"
+                    maxlength="120"
+                    placeholder="例如 午饭、工资到账、加油"
+                  />
+                </label>
+              </div>
+
+              <button type="submit" class="primary-button">保存记录</button>
+            </form>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="analysis">
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">图表分析</p>
+                <h2 id="analysisTitle">本月图表</h2>
+                <p id="analysisSubtitle" class="helper-text">饼图看分类，柱状图看趋势。</p>
+              </div>
+            </div>
+
+            <div class="analysis-grid">
+              <article class="chart-card">
+                <div class="chart-card-head">
+                  <h3>支出分类饼图</h3>
+                  <span id="pieChartTotal" class="muted-chip">总支出 $0.00</span>
+                </div>
+                <div id="pieChart" class="chart-frame"></div>
+              </article>
+
+              <article class="chart-card">
+                <div class="chart-card-head">
+                  <h3 id="barChartHeading">月内趋势柱状图</h3>
+                  <span id="barChartHint" class="muted-chip">按天查看</span>
+                </div>
+                <div id="barChart" class="bar-chart-frame"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head compact">
+              <div>
+                <p class="section-kicker">分类排行</p>
+                <h2>主要支出类别</h2>
+              </div>
+            </div>
+            <div id="categoryBreakdown" class="breakdown-list"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">建议</p>
+                <h2>开源节流建议</h2>
+                <p class="helper-text">结合当前所选月度或年度视图生成。</p>
+              </div>
+              <button id="refreshAdviceButton" class="secondary-button" type="button">
+                刷新建议
+              </button>
+            </div>
+            <div id="adviceList" class="advice-list"></div>
+          </section>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="主导航">
+        <button class="tab-button active" data-tab="dashboard">
+          <span>总览</span>
+          <small>月 / 年</small>
+        </button>
+        <button class="tab-button" data-tab="add">
+          <span>记账</span>
+          <small>快速录入</small>
+        </button>
+        <button class="tab-button" data-tab="analysis">
+          <span>分析</span>
+          <small>图表建议</small>
+        </button>
+      </nav>
+    </div>
+
+    <template id="transactionItemTemplate">
+      <li class="transaction-item">
+        <div class="item-main">
+          <div class="item-title-row">
+            <strong class="item-title"></strong>
+            <span class="type-badge"></span>
+          </div>
+          <p class="item-meta"></p>
+        </div>
+        <div class="item-side">
+          <strong class="item-amount"></strong>
+          <button class="text-button" type="button">删除</button>
+        </div>
+      </li>
+    </template>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
