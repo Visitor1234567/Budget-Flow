@@ -1,0 +1,74 @@
+timezone: America/New_York
+send_time: '08:00'
+language: zh-CN
+ui_language: zh-CN
+report_language: zh-CN
+enabled: true
+skip_weekends: true
+send_grace_minutes: 120
+max_news_items: 12
+max_news_per_source: 2
+max_stock_news_per_symbol: 1
+max_general_news_age_hours: 24
+max_stock_news_age_hours: 24
+strict_stock_news: true
+stock_news_fallback_to_best_match: true
+
+interests:
+  - AI
+  - macroeconomics
+  - markets
+  - New York
+  - global news
+
+excluded_keywords:
+  - sports
+  - NBA
+  - NFL
+  - soccer
+  - ESPN
+
+sources:
+  - name: BBC World
+    url: https://feeds.bbci.co.uk/news/world/rss.xml
+  - name: CNBC Markets
+    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+  - name: Reuters Search
+    url: https://news.google.com/rss/search?q=site:reuters.com&hl=en-US&gl=US&ceid=US:en
+
+stocks:
+  - NVDA
+  - AAPL
+  - MSFT
+
+stock_aliases:
+  NVDA:
+    - Nvidia
+    - NVIDIA Corp
+  AAPL:
+    - Apple
+    - Apple Inc
+  MSFT:
+    - Microsoft
+    - Microsoft Corp
+
+delivery:
+  telegram:
+    enabled: true
+    bot_token: '' # loaded from TELEGRAM_BOT_TOKEN, never committed
+    chat_id: '123456789' # REDACTED_TELEGRAM_CHAT_ID placeholder
+  discord:
+    enabled: false
+    webhook_url: ''
+  email:
+    enabled: false
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    username: ''
+    password: ''
+    from_addr: ''
+    to_addr: ''
+
+push_times:
+  - '08:00'
+  - '17:00'
