@@ -1,0 +1,50 @@
+name: Daily Briefing
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Poll several times per hour; cloud_run.py decides whether a configured
+    # America/New_York push slot is due and prevents duplicate sends.
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-briefing-state
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send briefing if due
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4.1-mini
+        run: python cloud_run.py
+
+      - name: Commit delivery state
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add briefing_state.json
+          git diff --cached --quiet || git commit -m 'Update briefing delivery state'
+          git pull --rebase origin main
+          git push origin main
